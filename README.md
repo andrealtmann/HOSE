@@ -19,7 +19,7 @@ the tool computes the allele counts for effect and alternative alleles for cases
 in both GWAS. These estimated allel counts will be used in the Woolf test for OR homogeneity to
 compute a P-value.
 
-### USAGE:
+## USAGE:
 
 ```
 gwas_a_fn <- ""
@@ -37,7 +37,7 @@ gwas_a_sampleinfo <- mk_sample_size_info(gwas_a_cases, gwas_a_controls)
 woolf_p <- woolf_test(my_inp, sample1=gwas_a_sampleinfo)
 ```
 
-## adjust p-values for genomic inflation
+### adjust p-values for genomic inflation
 P-values tend to be inflated. We currently use a simple adjustment based on
 the genomic inflation factor.
 
@@ -45,16 +45,16 @@ the genomic inflation factor.
 woolf_p_adj <- gc_correct(woolf_p[,1])
 ```
 
-## manhattan plot
+### manhattan plot
 Quickly create a Manhattan plot.
 
 ```
-woolf_man(my_inp[["GWAS_1"]], woolf_p_ajd)
+woolf_man(my_inp[["GWAS_1"]], woolf_p_adj)
 ```
 
 ## Important
-At the moment HOSE expects the files to adhere to some formatting 
-- all files provide positions according to the same genome build
+At the moment HOSE expects the files to adhere to some specific formatting 
+- All files provide positions according to the same genome build
 - Only at most one variant per position (i.e, no triallelic SNPs etc.)
 - The effect allele is the same in all files (further scripts to help processing files may be added in the future)
 
