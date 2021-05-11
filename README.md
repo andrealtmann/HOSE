@@ -20,6 +20,8 @@ in both GWAS. These estimated allel counts will be used in the Woolf test for OR
 compute a P-value.
 
 ### USAGE:
+
+```
 gwas_a_fn <- ""
 gwas_b_fn <- ""
 maf_fn    <- ""
@@ -33,12 +35,22 @@ gwas_a_controls <- 10000
 
 gwas_a_sampleinfo <- mk_sample_size_info(gwas_a_cases, gwas_a_controls)
 woolf_p <- woolf_test(my_inp, sample1=gwas_a_sampleinfo)
+```
 
 ## adjust p-values for genomic inflation
+P-values tend to be inflated. We currently use a simple adjustment based on
+the genomic inflation factor.
+
+```
 woolf_p_adj <- gc_correct(woolf_p[,1])
+```
 
 ## manhattan plot
+Quickly create a Manhattan plot.
+
+```
 woolf_man(my_inp[["GWAS_1"]], woolf_p_ajd)
+```
 
 ## Important
 At the moment HOSE expects the files to adhere to some formatting 
