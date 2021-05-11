@@ -29,7 +29,7 @@ maf_fn    <- ""
 my_inp  <- harmonize_input(gwas_a_fn, gwas_b_fn, maf_fn)
 woolf_p <- woolf_test(my_inp)
 
-Alternative (in case sample sizes are missing from sumstat 1):
+#Alternative (in case sample sizes are missing from sumstat 1):
 gwas_a_cases <- 1000
 gwas_a_controls <- 10000
 
@@ -74,9 +74,11 @@ columns contain:
 9. Sample size cases
 10. Sample size controls
 
-#1       100004726       chr1:100004726  A       G       0.0388  0.0323  0.2293  26421   442271
-#1       100005477       chr1:100005477  A       G       0.039   0.0323  0.2278  26421   442271
-#1       100008607       chr1:100008607  C       A       0.0344  0.0245  0.16    26421   442271
+```
+1       100004726       chr1:100004726  A       G       0.0388  0.0323  0.2293  26421   442271
+1       100005477       chr1:100005477  A       G       0.039   0.0323  0.2278  26421   442271
+1       100008607       chr1:100008607  C       A       0.0344  0.0245  0.16    26421   442271
+```
 
 - GWAS summary statistics (8 columns)
 same as above, just missing sample sizes for cases/controls. The number of cases and controls will be provided as aparameter.
@@ -89,5 +91,7 @@ same as above, just missing sample sizes for cases/controls. The number of cases
 5. Reference allele
 6. minor allele frequency
 
-#1       798400  rs10900604      G       A       0.219485
-#1       2082566 rs2257182       C       T       0.37047
+```
+1       798400  rs10900604      G       A       0.219485
+1       2082566 rs2257182       C       T       0.37047
+```
