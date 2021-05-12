@@ -12,8 +12,15 @@
 ### required packages
 #for quickly loading the summary statitics
 library(data.table)
+
 #for plotting
 library(qqman)
+
+#for apply with progress bar
+library(pbapply)
+
+#implements a bunch of tests
+library(DescTools)
 
 ### internal helper function ###
 
@@ -44,12 +51,12 @@ fread_wrap <- function(fname){
 ### plotting functions ###
 
 #wrapper for qqman's qq function
-woolf_qq <- function(x){
+HOSE_qq <- function(x){
   qq(x[,1])
 }
 
 #wrapper for qqman's manhattan function
-woolf_man <- function(inp, pv, ...){
+HOSE_man <- function(inp, pv, ...){
   dummy <- data.frame(inp[["GWAS_1"]], P=pv)
   manhattan(dummy, chr="V1", bp="V2", snp="V3", ...)
 }
@@ -91,7 +98,7 @@ harmonize_input <- function(gwas_a, gwas_b, maf){
   return(res)
 }
 
-#one row input:
+#Computing the woolf test (faster than BD test and similar p-value)
 #BETA1       SE1       P1 ACA1  ACO1   BETA2    SE2     P2  ACA2  ACO2      MAF
 sumstat_woolf_test <- function(x, add_n=0.00001){
 
@@ -143,10 +150,74 @@ sumstat_woolf_test <- function(x, add_n=0.00001){
 
 }
 
+#using Breslow-Day test (with Tarone correction; default true)
+#one row input:
+#BETA1       SE1       P1 ACA1  ACO1   BETA2    SE2     P2  ACA2  ACO2      MAF
+sumstat_BD_test <- function(x, correct=T, add_n=0.00001){
 
-##woolf_test for two summary stats
+  x_maf <- as.double(x["MAF"])
+
+  Rh = x_maf/(1.0 - x_maf)
+  mafs <- c()
+  OR <- c()
+
+  allele_counts <- array(NA, dim=c(2,2,2))
+
+  #For GWAS 1 (convert sample size and effect size and maf to maf for cases):
+  ca1_NCHROBS <- as.integer(x["ACA1"])
+  co1_NCHROBS <- as.integer(x["ACO1"])
+  #NOTE: beta converted to odds_ratio
+  Dn1 = ca1_NCHROBS / (exp(as.double(x["BETA1"])) * Rh + 1)
+  De1 = ca1_NCHROBS - Dn1
+  co1_MAF = x_maf
+  ca1_MAF = De1 / ca1_NCHROBS
+  OR <- c(OR, getOR(ca1_MAF + add_n, co1_MAF + add_n))
+  mafs <- c(mafs, ca1_MAF, co1_MAF)
+
+  allele_counts[,1,1] <- c(ca1_MAF, 1.0-ca1_MAF) * ca1_NCHROBS
+  allele_counts[,2,1] <- c(co1_MAF, 1.0-co1_MAF) * co1_NCHROBS
+
+  #For GWAS 2 (same for gwas 2):
+  ca2_NCHROBS <- as.integer(x["ACA2"])
+  co2_NCHROBS <- as.integer(x["ACO2"])
+  #NOTE: beta converted to odds_ratio
+  Dn2 = ca2_NCHROBS / (exp(as.double(x["BETA2"])) * Rh + 1)
+  De2 = ca2_NCHROBS - Dn2
+  co2_MAF = x_maf
+  ca2_MAF = De2 / ca2_NCHROBS
+  OR <- c(OR, getOR(ca2_MAF + add_n, co2_MAF + add_n))
+  mafs <- c(mafs, ca2_MAF, co2_MAF)
+
+  allele_counts[,1,2] <- c(ca2_MAF, 1.0-ca2_MAF) * ca2_NCHROBS
+  allele_counts[,2,2] <- c(co2_MAF, 1.0-co2_MAF) * co2_NCHROBS
+  OR <- log(OR)
+
+  #use the 2x2x2 table in the BD test
+  bd_res <- BreslowDayTest(as.table(allele_counts), NA, correct)
+  res <- c(bd_res$p.value, bd_res$statistic, OR[1], OR[2])
+  return(res)
+
+}
+
+#meta analysis (inverse variance weighted; but flip sign of one GWAS!)
+#BETA1       SE1       P1 ACA1  ACO1   BETA2    SE2     P2  ACA2  ACO2      MAF
+sumstat_neg_meta_test <- function(x){
+
+  #weights (1/SE^2)
+  w  <- 1/as.double(c(x[2], x[7]))^2
+  SE <- sqrt(1/sum(w))
+  b_diff <- sum(c(as.double(x[1]), -as.double(x[6])) * w)/sum(w)
+  Z_diff <- b_diff/SE
+  pv     <- pnorm(abs(Z_diff), lower.tail=F) * 2
+
+  res <- as.double(c(pv, Z_diff, x[1], x[6]))
+  return(res)
+}
+
+
+##HOSE_test for two summary stats (main function)
 #input:
-woolf_test <- function(inp, sample1=NA, sample2=NA){
+HOSE_test <- function(inp, sample1=NA, sample2=NA, method="woolf"){
 
   allele_not_eq <- sum(inp[["GWAS_1"]][,4] != inp[["GWAS_2"]][,4])
   if (allele_not_eq > 0){
@@ -167,15 +238,15 @@ woolf_test <- function(inp, sample1=NA, sample2=NA){
     p1 <- inp[["GWAS_1"]][,6:10]
   }
   #add sample size information
-  if (is.na(sample1)){
+  if (is.na(sample1[1])){
     p1[,4:5] <- p1[,4:5] * 2
   } else {
     p1[,4] <- sample1[1]
     p1[,5] <- sample1[2]
   }
   colnames(p1) <- paste(c("BETA","SE","P","ACA","ACO"), 1, sep="")
-
-  if (is.na(p1[1,"ACA"]) | is.na(p1[1,"ACO"])){
+  print(head(p1))
+  if (is.na(p1[1,"ACA1"]) | is.na(p1[1,"ACO1"])){
     stop("GWAS 1 sample size missing; either add sample size columns to the summary statistics or provide number of cases and controls.")
   }
 
@@ -194,7 +265,7 @@ woolf_test <- function(inp, sample1=NA, sample2=NA){
   }
   colnames(p2) <- paste(c("BETA","SE","P","ACA","ACO"), 2, sep="")
 
-  if (is.na(p2[1,"ACA"]) | is.na(p2[1,"ACO"])){
+  if (is.na(p2[1,"ACA2"]) | is.na(p2[1,"ACO2"])){
     stop("GWAS 2 sample size missing; either add sample size columns to the summary statistics or provide number of cases and controls.")
   }
 
@@ -204,15 +275,29 @@ woolf_test <- function(inp, sample1=NA, sample2=NA){
   mdat <- cbind(p1, p2, MAF)
   print(head(mdat))
 
-  return(t(apply(mdat,1, sumstat_woolf_test)))
+  if (method=="woolf")
+    res <- t(pbapply(mdat,1, sumstat_woolf_test))
+  if (method=="BD"){
+    res <- t(pbapply(mdat,1, sumstat_BD_test))
+  }
+  if (method=="BD_un"){
+    res <- t(pbapply(mdat,1, sumstat_BD_test, correct=F))
+  }
+  if (method=="NMETA"){
+    res <- t(pbapply(mdat,1, sumstat_neg_meta_test))
+  }
+
+  return(res)
 
 }
+
+
 
 #correct p-values for genomic inflation
 gc_correct <- function(pv){
 
   chisq_stat = qchisq(pv,1, lower.tail=F)
-  lambda_gc = median(chisq_stat)/qchisq(0.5,1)
+  lambda_gc = median(chisq_stat, na.rm=T)/qchisq(0.5,1)
 
   message("genomic inflation: ", lambda_gc)
 

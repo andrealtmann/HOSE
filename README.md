@@ -27,14 +27,14 @@ gwas_b_fn <- ""
 maf_fn    <- ""
 
 my_inp  <- harmonize_input(gwas_a_fn, gwas_b_fn, maf_fn)
-woolf_p <- woolf_test(my_inp)
+woolf_p <- HOSE_test(my_inp)
 
 #Alternative (in case sample sizes are missing from sumstat 1):
 gwas_a_cases <- 1000
 gwas_a_controls <- 10000
 
 gwas_a_sampleinfo <- mk_sample_size_info(gwas_a_cases, gwas_a_controls)
-woolf_p <- woolf_test(my_inp, sample1=gwas_a_sampleinfo)
+woolf_p <- HOSE_test(my_inp, sample1=gwas_a_sampleinfo)
 ```
 
 ### adjust p-values for genomic inflation
@@ -49,8 +49,16 @@ woolf_p_adj <- gc_correct(woolf_p[,1])
 Quickly create a Manhattan plot.
 
 ```
-woolf_man(my_inp[["GWAS_1"]], woolf_p_adj)
+HOSE_man(my_inp, woolf_p_adj)
 ```
+
+## Implemented tests
+There are differnt tests implemented at the moment.
+1) woolf: Woolf test (default)
+2) BD: Breslow-Day test with correction
+3) BD_un: Breslow-Day test w/o correction
+3) NMETA: inverse variance meta analysis of the differences of the effect sizes
+The methods can be selected in the HOSE_test function using the "method" variable 
 
 ## Important
 At the moment HOSE expects the files to adhere to some specific formatting 
