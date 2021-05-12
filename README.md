@@ -58,6 +58,7 @@ There are differnt tests implemented at the moment.
 2) BD: Breslow-Day test with correction
 3) BD_un: Breslow-Day test w/o correction
 3) NMETA: inverse variance meta analysis of the differences of the effect sizes
+
 The methods can be selected in the HOSE_test function using the "method" variable 
 
 ## Important
